@@ -5,6 +5,8 @@ import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -17,7 +19,8 @@ public class SwerveModule {
     public int moduleNumber;
     private Rotation2d angleOffset;
 
-    private TalonFX mAngleMotor;
+    private CANSparkMax mAngleMotor;
+    private TalonFX mAngleMotor1;
     private TalonFX mDriveMotor;
     private CANcoder angleEncoder;
 
@@ -39,8 +42,9 @@ public class SwerveModule {
         angleEncoder.getConfigurator().apply(Robot.ctreConfigs.swerveCANcoderConfig);
 
         /* Angle Motor Config */
-        mAngleMotor = new TalonFX(moduleConstants.angleMotorID);
-        mAngleMotor.getConfigurator().apply(Robot.ctreConfigs.swerveAngleFXConfig);
+        mAngleMotor = new CANSparkMax(moduleConstants.angleMotorID, MotorType.kBrushless);
+        mAngleMotor.restoreFactoryDefaults();
+
         resetToAbsolute();
 
         /* Drive Motor Config */
@@ -51,9 +55,10 @@ public class SwerveModule {
 
     public void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
         desiredState = SwerveModuleState.optimize(desiredState, getState().angle); 
-        mAngleMotor.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
+        mAngleMotor1.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
         setSpeed(desiredState, isOpenLoop);
-    }
+
+
 
     private void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
         if(isOpenLoop){
@@ -74,6 +79,7 @@ public class SwerveModule {
     public void resetToAbsolute(){
         double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
         mAngleMotor.setPosition(absolutePosition);
+        mAngleMotor.setSoftLimit(absolutePosition);
     }
 
     public SwerveModuleState getState(){
