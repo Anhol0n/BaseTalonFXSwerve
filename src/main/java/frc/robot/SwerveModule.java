@@ -6,6 +6,7 @@ import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
@@ -23,6 +24,8 @@ public class SwerveModule {
     private TalonFX mAngleMotor1;
     private TalonFX mDriveMotor;
     private CANcoder angleEncoder;
+
+    private final RelativeEncoder turningEncoder;
 
     private final SimpleMotorFeedforward driveFeedForward = new SimpleMotorFeedforward(Constants.Swerve.driveKS, Constants.Swerve.driveKV, Constants.Swerve.driveKA);
 
@@ -45,6 +48,8 @@ public class SwerveModule {
         mAngleMotor = new CANSparkMax(moduleConstants.angleMotorID, MotorType.kBrushless);
         mAngleMotor.restoreFactoryDefaults();
 
+        turningEncoder = mAngleMotor.getEncoder();      
+
         resetToAbsolute();
 
         /* Drive Motor Config */
@@ -58,7 +63,7 @@ public class SwerveModule {
         mAngleMotor1.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
         setSpeed(desiredState, isOpenLoop);
 
-
+    }
 
     private void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
         if(isOpenLoop){
@@ -78,21 +83,24 @@ public class SwerveModule {
 
     public void resetToAbsolute(){
         double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
-        mAngleMotor.setPosition(absolutePosition);
-        mAngleMotor.setSoftLimit(absolutePosition);
+        turningEncoder.setPosition(absolutePosition);
     }
 
     public SwerveModuleState getState(){
         return new SwerveModuleState(
             Conversions.RPSToMPS(mDriveMotor.getVelocity().getValue(), Constants.Swerve.wheelCircumference), 
-            Rotation2d.fromRotations(mAngleMotor.getPosition().getValue())
+            Rotation2d.fromRotations(
+//VE SE O ARMAZENAMENTO EM CACHE VAI FUNCIONAR
+                turningEncoder.getPosition())
+
         );
     }
 
     public SwerveModulePosition getPosition(){
         return new SwerveModulePosition(
             Conversions.rotationsToMeters(mDriveMotor.getPosition().getValue(), Constants.Swerve.wheelCircumference), 
-            Rotation2d.fromRotations(mAngleMotor.getPosition().getValue())
+//VE SE O ARMAZENAMENTO EM CACHE VAI FUNCIONAR
+            Rotation2d.fromRotations(turningEncoder.getPosition())
         );
     }
 }
